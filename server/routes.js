@@ -3,7 +3,8 @@ import { Controller } from './controller.js';
 import { logger } from './util.js';
 const {
   location,
-  pages: { homeHTML },
+  pages: { homeHTML, controllerHTML },
+  constants: { CONTENT_TYPE },
 } = config;
 
 const controller = Controller();
@@ -11,14 +12,12 @@ const controller = Controller();
 async function routes(request, response) {
   const { method, url } = request;
 
-  console.log(config.pages);
-
   if (method === 'GET' && url === '/') {
     response.writeHead(302, {
       location: location.home,
     });
 
-    response.end();
+    return response.end();
   }
 
   if (method === 'GET' && url === '/home') {
@@ -28,11 +27,38 @@ async function routes(request, response) {
     return stream.pipe(response);
   }
 
+  if (method === 'GET' && url === '/controller') {
+    const { stream } = await controller.getFileStream(controllerHTML);
+
+    // padrão do response é text/html
+    return stream.pipe(response);
+  }
+
+  // files
+  if (method === 'GET') {
+    const { stream, type } = await controller.getFileStream(url);
+    const contentType = CONTENT_TYPE[type];
+    if (contentType) {
+      response.writeHead(200, { 'Content-Type': contentType });
+    }
+    return stream.pipe(response);
+  }
+
+  response.writeHead(404);
   return response.end('working');
 }
 
+function handleError(error, response) {
+  if (error.message.includes('ENOENT')) {
+    logger.warn(`asset not found ${error.stack}`);
+    response.writeHead(404);
+    return response.end();
+  }
+  logger.error(`caught error on API ${error.stack}`);
+  response.writeHead(500);
+  return response.end();
+}
+
 export function handler(request, response) {
-  return routes(request, response).catch(err =>
-    logger.error(`Deu ruimmm ${err.stack}`)
-  );
+  return routes(request, response).catch(err => handleError(err, response));
 }

@@ -10,7 +10,6 @@ const {
 
 export function Service() {
   function createFileStream(filename) {
-    console.log(filename);
     return fs.createReadStream(filename);
   }
 
@@ -35,8 +34,8 @@ export function Service() {
   }
 
   return {
-    createFileStream: createFileStream(),
-    getFileInfo: getFileInfo(),
-    getFileStream: getFileStream(),
+    createFileStream: createFileStream,
+    getFileInfo: getFileInfo,
+    getFileStream: getFileStream,
   };
 }
